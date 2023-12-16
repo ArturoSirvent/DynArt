@@ -1,0 +1,7 @@
+mido 
+pygame
+pretty_midi
+pandas 
+numpy 
+matplotlib
+
