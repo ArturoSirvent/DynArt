@@ -595,6 +595,83 @@ preferred_transitions = {
     "vii-dim": ["I"]
 }
 
+# cuerda
+conf_harm_cuerda={"Channel_1":{"name": "Flute_Melody" , "instrument":music21.instrument.Flute(),"level":"Melody" , "octave":None,"repetition":True },
+           "Channel_2":{"name": "Soprano" , "instrument":music21.instrument.Violin(),"level":"Melody" , "octave":5 ,"repetition":True},
+           "Channel_3":{"name": "Alto" , "instrument":music21.instrument.Violin(),"level":[1] , "octave": 5 ,"repetition":True},
+           "Channel_4":{"name": "Tenor" , "instrument":music21.instrument.Viola(),"level":[2] , "octave": 4 ,"repetition":True},
+           "Channel_5":{"name": "Chello" , "instrument":music21.instrument.Violoncello(),"level":[0] , "octave":3 ,"repetition":False},
+           "Channel_6":{"name": "DoubleBass" , "instrument":music21.instrument.Contrabass(),"level":[0] , "octave":3 ,"repetition":False}
+           }
+
+# viento metal
+conf_harm_viento_metal={"Channel_7":{"name": "Tuba" , "instrument":music21.instrument.Tuba(),"level":[0] , "octave":3 ,"repetition":True},
+           "Channel_8":{"name": "Trombone" , "instrument":music21.instrument.Trombone(),"level":[2] , "octave":3 ,"repetition":False},
+           "Channel_9":{"name": "FrenchHorn" , "instrument":music21.instrument.Horn(),"level":[1] , "octave": 5 ,"repetition":False}
+           }
+
+
+# viento madera
+conf_harm_viento_madera={"Channel_10":{"name": "Fagot" , "instrument":music21.instrument.EnglishHorn(),"level":[0] , "octave":3 ,"repetition":False},
+           "Channel_11":{"name": "Clarinet" , "instrument":music21.instrument.Clarinet(),"level":[2] , "octave":3 ,"repetition":True},
+           "Channel_12":{"name": "Flute" , "instrument":music21.instrument.Flute(),"level":[1] , "octave": 4 ,"repetition":True}
+           }
+
+
+def create_score2(melody, chord_sequence, conf_harm):
+    chord_mappings=melody.chord_mappings
+    indices_alegro=melody.positions_allegro
+    score = music21.stream.Score()
+    duration_per_section = melody.time_signature.numerator
+    number_notes_in_fast_measures=2
+    small_duration_per_section=duration_per_section/number_notes_in_fast_measures
+    score.append(melody.tempo)
+    for channel, config in conf_harm.items():
+        part = music21.stream.Part()
+        part.append(config["instrument"])
+        part.append(copy.deepcopy(melody.time_signature))
+
+
+        if config["level"] == "Melody":
+            for note_name, duration,octave in melody.notes:
+                if config["octave"] is not None:
+                    octave=config["octave"]
+                if not isinstance(note_name, list):
+                    if note_name == "Rest":
+                        music_note = music21.note.Rest(quarterLength=duration)
+                    else:
+                        music_note = music21.note.Note(note_name, 
+                                                       quarterLength=duration, 
+                                                       octave=octave)
+                else:
+                    music_note = music21.chord.Chord(note_name, 
+                                                     quarterLength=duration, 
+                                                     octave=octave)
+                part.append(music_note)
+        else:
+            current_duration = 0
+            for i,chord_name in enumerate(chord_sequence):
+                if (any([j in melody.note_measure_correspondance[i] for j in melody.positions_allegro]))&(config["repetition"]):
+                    for _ in range(number_notes_in_fast_measures):
+                        chord_notes_list = [chord_mappings.get(chord_name, [])[i] for i in config["level"]]
+                        chord_notes = music21.chord.Chord([music21.note.Note(i, octave=config["octave"]) for i in chord_notes_list], 
+                                                        quarterLength=small_duration_per_section)
+                        chord_notes.offset = current_duration
+                        part.append(chord_notes)
+                        current_duration += small_duration_per_section
+                else:
+                    chord_notes_list = [chord_mappings.get(chord_name, [])[i] for i in config["level"]]
+                    chord_notes = music21.chord.Chord([music21.note.Note(i, octave=config["octave"]) for i in chord_notes_list], 
+                                                    quarterLength=duration_per_section)
+                    chord_notes.offset = current_duration
+                    part.append(chord_notes)
+                    current_duration += duration_per_section
+
+        score.append(part)
+
+    return score
+
+
 
 def cargar_archivo(file_name='./data-MIDI/carmen_flue.musicxml'):
     global melody
@@ -615,7 +692,7 @@ def seleccion_instrumento(seleccion):
     return "Instruments loaded!"
 
 def entrenar(peso1, peso2, peso3, peso4, peso5, poblacion, epocas):
-    global melody, preferred_transitions
+    global melody, preferred_transitions,conf_harm_cuerda,conf_harm_viento_madera,conf_harm_viento_metal
     weights = {
         "chord_melody_congruence": peso1,  #0.6,
         "chord_variety": peso2, #0.23,
@@ -638,8 +715,17 @@ def entrenar(peso1, peso2, peso3, peso4, peso5, poblacion, epocas):
     )
 
     generated_chords = harmonizer.generate(generations=epocas)
+
+    # Render to music21 score and show it
+    conf_harm_cuerda.update(conf_harm_viento_madera)
+    conf_harm_cuerda.update(conf_harm_viento_metal)
+    music21_score = create_score2(melody, generated_chords,conf_harm_cuerda)
+
+    music21_score.write('midi', fp='./data-MIDI/result.mid')
+
+
     
-    return f"Training completed: Population {poblacion}, Epochs {epocas}"
+    return f"Training completed: Population {poblacion}, Epochs {epocas}" #gr.Button.update(link="file/=" +"./data-MIDI/C4.mid")
 
 
 with gr.Blocks() as demo:
@@ -678,10 +764,10 @@ with gr.Blocks() as demo:
 
     entrenar_output = gr.Textbox(info="Summary of training")
     entrenar_btn = gr.Button("Train")
-    download_button=gr.Button
+    download_button = gr.Button("Dowload",link="result.mid")
+
     entrenar_btn.click(entrenar, inputs=[peso1, peso2, peso3, peso4, peso5, poblacion, epocas], outputs=entrenar_output)
 
 
-demo.launch()
-
+demo.launch(allowed_paths=["result.mid"])
 
