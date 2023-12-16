@@ -1,5 +1,5 @@
 # DynArt
-The Sound Of AI Workshop at PompeuFabra 11-15-dic 2023  
+The Sound Of AI Generaive Music Workshop at PompeuFabra 11-15-dic 2023  
 
 The code is very very dirty, sorry about that.  
 The most important notebook is:  002.1-GenAlgotmoFinally.ipynb  
