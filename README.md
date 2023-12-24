@@ -8,5 +8,5 @@ The final result is the harmonization (resultadoFINAL.mp3) of a monotonic melody
 As a summary of the algorithm, check the following image:  
 ![](presentacion/arch_genetic.png)  
 The interactive webapp stills having some issues, but with clean midi files it should work.    
-![](Screenshot_from_2023-12-16 22-07-27.png)  
+![](Screenshot.png)  
 
