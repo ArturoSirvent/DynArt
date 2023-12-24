@@ -10,3 +10,4 @@ As a summary of the algorithm, check the following image:
 The interactive webapp stills having some issues, but with clean midi files it should work.    
 ![](Screenshot.png)  
 
+![](resultadoFINAL.mov)
